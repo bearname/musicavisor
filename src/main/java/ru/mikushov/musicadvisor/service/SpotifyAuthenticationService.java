@@ -15,28 +15,29 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 
 public class SpotifyAuthenticationService  implements AuthenticationService {
-    private String accessToken = "";
+    private String accessToken = "BQA5qVrU48dAjhzYOsiQXRqfDFV5e8RlF1eoOBvUp3-cH5MqUbu5z9zEdBBZhCLX0eLDGEM9oNZg0KQrrCVPwfoRkloOQWZLzgVIxfFtSYBbXcmQWaV0OTTvNSlDlo0KncyhNk5ld_JIQ2nWg3lZ4KWZR6vJADveNSL1ow";
 
     @Override
     public void authenticate() {
-        HttpServer server = null;
-        try {
-            HttpClient client = HttpClient.newBuilder().build();
-            server = HttpServer.create();
-            server.bind(new InetSocketAddress(8080), 0);
-            HttpHandler httpHandler = getAuthHandler(client);
+        if (accessToken.isEmpty()) {
+            HttpServer server = null;
+            try {
+                HttpClient client = HttpClient.newBuilder().build();
+                server = HttpServer.create();
+                server.bind(new InetSocketAddress(8080), 0);
+                HttpHandler httpHandler = getAuthHandler(client);
 
-            server.createContext("/", httpHandler);
-            server.start();
+                server.createContext("/", httpHandler);
+                server.start();
 
-            getSpotifyCode(client);
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-            if (server != null) {
-                server.stop(1);
+                getSpotifyCode(client);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                if (server != null) {
+                    server.stop(1);
+                }
             }
         }
-
     }
 
     @Override

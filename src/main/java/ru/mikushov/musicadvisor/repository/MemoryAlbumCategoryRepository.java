@@ -47,4 +47,9 @@ public class MemoryAlbumCategoryRepository implements AlbumCategoryRepository {
 
         return null;
     }
+
+    @Override
+    public boolean isEmpty() {
+        return albumCategoryList.isEmpty();
+    }
 }

@@ -15,4 +15,10 @@ public class MemoryMusicRepository implements MusicRepository {
     public List<Music> getAll() {
         return musicList;
     }
+
+    @Override
+    public boolean isEmpty() {
+        return musicList.isEmpty();
+    }
+
 }

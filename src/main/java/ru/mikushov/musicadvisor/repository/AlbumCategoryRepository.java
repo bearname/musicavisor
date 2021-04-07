@@ -14,4 +14,6 @@ public interface AlbumCategoryRepository {
     AlbumCategory findById(String id) ;
 
     AlbumCategory findByName(String name) ;
+
+    boolean isEmpty();
 }

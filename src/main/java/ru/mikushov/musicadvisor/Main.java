@@ -3,12 +3,14 @@ package ru.mikushov.musicadvisor;
 
 import ru.mikushov.musicadvisor.controller.AppController;
 import ru.mikushov.musicadvisor.controller.Command;
+import ru.mikushov.musicadvisor.infrostructure.SpotifyClient;
+import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryAlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
+import ru.mikushov.musicadvisor.repository.MusicRepository;
 import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 import ru.mikushov.musicadvisor.service.SpotifyAuthenticationService;
 
-import java.io.IOException;
 import java.util.*;
 
 import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
@@ -26,23 +28,21 @@ public class Main {
 
     static {
         SpotifyAuthenticationService authenticationService = new SpotifyAuthenticationService();
-        MemoryAlbumCategoryRepository albumCategoryRepository = new MemoryAlbumCategoryRepository();
-        MemoryMusicRepository categoryMusicRepository = new MemoryMusicRepository();
-        MemoryMusicRepository featuredMusicRepository = new MemoryMusicRepository();
-        MusicServiceImpl musicService = new MusicServiceImpl(API_ROUTERS, featuredMusicRepository, albumCategoryRepository, categoryMusicRepository);
+        AlbumCategoryRepository albumCategoryRepository = new MemoryAlbumCategoryRepository();
+        MusicRepository categoryMusicRepository = new MemoryMusicRepository();
+        MusicRepository featuredMusicRepository = new MemoryMusicRepository();
 
-        appController = new AppController(
-                categoryMusicRepository,
-                authenticationService,
-                musicService);
+        SpotifyClient spotifyClient = new SpotifyClient(API_ROUTERS, authenticationService);
+
+        MusicServiceImpl musicService = new MusicServiceImpl(featuredMusicRepository, albumCategoryRepository, categoryMusicRepository, spotifyClient);
+
+        appController = new AppController(musicService);
     }
 
     public static void main(String[] args) {
         appController.printHelpMessage();
         String command = "";
         Scanner scanner = new Scanner(System.in);
-
-        appController.handleAuthCommand();
         System.out.print("> ");
         while (scanner.hasNext()) {
             try {
@@ -61,11 +61,11 @@ public class Main {
             System.out.println("---NEW RELEASES---");
             appController.handleNewCommand();
         } else if (command.equals("auth")) {
-            if (appController.isAuthenticated()) {
-                appController.handleAuthCommand();
-            } else {
-                System.out.println("Already authenticated.");
-            }
+            appController.handleAuthCommand();
+//            if (appController.isAuthenticated()) {
+//            } else {
+//                System.out.println("Already authenticated.");
+//            }
         } else if (command.equals(Command.FEATURED)) {
             appController.handleFeaturedCommand();
         } else if (command.equals(Command.CATEGORIES)) {

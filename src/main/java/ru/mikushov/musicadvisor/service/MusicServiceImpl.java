@@ -1,59 +1,47 @@
 package ru.mikushov.musicadvisor.service;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import ru.mikushov.musicadvisor.controller.Command;
+import ru.mikushov.musicadvisor.infrostructure.SpotifyClient;
 import ru.mikushov.musicadvisor.model.Album;
 import ru.mikushov.musicadvisor.model.AlbumCategory;
-import ru.mikushov.musicadvisor.model.Artist;
 import ru.mikushov.musicadvisor.model.Music;
 import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
-import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-
-import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
 
 public class MusicServiceImpl implements MusicService {
 
-    private final Map<String, String> apiRouter;
     private final MusicRepository featuredMusicRepository;
     private final AlbumCategoryRepository albumCategoryRepository;
-    private final MemoryMusicRepository categoryMusicRepository;
+    private final MusicRepository categoryMusicRepository;
+    private final SpotifyClient spotifyClient;
 
-    public MusicServiceImpl(Map<String, String> apiRouter, MusicRepository featuredMusicRepository, AlbumCategoryRepository albumCategoryRepository, MemoryMusicRepository categoryMusicRepository) {
-        this.apiRouter = apiRouter;
+    public MusicServiceImpl(MusicRepository featuredMusicRepository, AlbumCategoryRepository albumCategoryRepository, MusicRepository categoryMusicRepository, SpotifyClient spotifyClient) {
         this.featuredMusicRepository = featuredMusicRepository;
         this.albumCategoryRepository = albumCategoryRepository;
         this.categoryMusicRepository = categoryMusicRepository;
+        this.spotifyClient = spotifyClient;
     }
 
-    public List<Album> getMusicAlbum(String accessToken) {
+    public List<Album> getNewReleasesMusic( ) {
         try {
-            HttpResponse<String> response = getSpotifyInformation(Command.NEW, accessToken);
-            JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            JsonArray albums = asJsonObject.get("albums").getAsJsonObject().get("items").getAsJsonArray();
-
-            return fillAlbumList(albums);
+            return spotifyClient.getNewReleaseMusic();
         } catch (Exception exception) {
             return new ArrayList<>();
         }
     }
 
-    public List<Music> getFeaturedMusicList(String accessToken) {
+    public List<Music> getFeaturedMusicList() {
         try {
-            fillFeaturedMusicRepository(accessToken);
-            return featuredMusicRepository.getAll();
+            List<Music> featuredPlaylists = featuredMusicRepository.getAll();
+
+            if (featuredPlaylists.isEmpty()) {
+                featuredPlaylists = updateFeaturedCache();
+            }
+
+            return featuredPlaylists;
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
 
@@ -61,39 +49,32 @@ public class MusicServiceImpl implements MusicService {
         }
     }
 
-    public List<AlbumCategory> getAlbumCategoryList(String accessToken) {
-        HttpResponse<String> response;
+    public List<AlbumCategory> getAlbumCategoryList() {
         try {
-            response = getSpotifyInformation(Command.CATEGORIES, accessToken);
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            List<AlbumCategory> all = albumCategoryRepository.getAll();
+            if (all.isEmpty()) {
+                all = updateCacheOfAlbumCategories();
+            }
+
+            return all;
+        } catch (Exception exception) {
             return new ArrayList<>();
         }
-
-        System.out.println(response.body());
-        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-        JsonArray categories = asJsonObject.get("categories").getAsJsonObject().get("items").getAsJsonArray();
-
-        for (JsonElement category : categories) {
-
-            JsonObject album = category.getAsJsonObject();
-
-            String id = album.get("id").getAsString();
-            String name = album.get("name").getAsString();
-            albumCategoryRepository.add(new AlbumCategory(id, name));
-        }
-
-        return albumCategoryRepository.getAll();
     }
 
-    public List<Music> getMusicByCategoryName(String categoryName, String accessToken) {
-        final var albumCategory = albumCategoryRepository.findByName(categoryName);
+    public List<Music> getMusicByCategoryName(String categoryName) {
+        if (albumCategoryRepository.isEmpty()) {
+            updateCacheOfAlbumCategories();
+        }
+
+        final AlbumCategory albumCategory = albumCategoryRepository.findByName(categoryName);
         List<Music> musicList = new ArrayList<>();
         if (albumCategory != null) {
             try {
-                updateApiRoutes(albumCategory.getId());
-                HttpResponse<String> response = getSpotifyInformation(PLAYLISTS, accessToken);
-                fillCategoryMusicRepository(response);
+                if (categoryMusicRepository.isEmpty()) {
+                    updateCacheOfCategoryMusicRepository(albumCategory);
+                }
+
                 musicList = categoryMusicRepository.getAll();
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
@@ -103,77 +84,38 @@ public class MusicServiceImpl implements MusicService {
         return musicList;
     }
 
-    private HttpResponse<String> getSpotifyInformation(String command, String accessToken) throws IOException, InterruptedException {
-        HttpClient client = HttpClient.newBuilder().build();
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .header("Authorization", "Bearer " + accessToken)
-                .uri(URI.create(apiRouter.get(command)))
-                .GET()
-                .build();
-
-        return client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+    private void updateCacheOfCategoryMusicRepository(AlbumCategory albumCategory) throws IOException, InterruptedException {
+        System.out.println("update Cache Of Category Music ");
+        List<Music> musics = spotifyClient.getMusicByCategory(albumCategory);
+        saveMusicToRepository(musics, categoryMusicRepository);
     }
 
-    private List<Album> fillAlbumList(JsonArray albums) {
-        List<Album> albumList = new ArrayList<>();
+    private List<Music> updateFeaturedCache() throws IOException, InterruptedException {
+        System.out.println("Update Featured playlist cache");
+        List<Music> featuredPlaylists = spotifyClient.getFeaturedPlaylists();
 
-        for (JsonElement albumElement : albums) {
-            JsonObject albumObject = albumElement.getAsJsonObject();
-
-            String name = albumObject.get("name").getAsString();
-            JsonArray artists = albumObject.get("artists").getAsJsonArray();
-            String albumUrl = albumObject.get("external_urls").getAsJsonObject().get("spotify").getAsString();
-            Album album = new Album(name, fillArtistList(artists), albumUrl);
-            System.out.println(album);
-            albumList.add(album);
+        for (Music music : featuredPlaylists) {
+            featuredMusicRepository.add(music);
         }
 
-        return albumList;
+        featuredPlaylists = featuredMusicRepository.getAll();
+        return featuredPlaylists;
     }
 
-    private List<Artist> fillArtistList(JsonArray artists) {
-        List<Artist> artistList = new ArrayList<>();
+    private List<AlbumCategory> updateCacheOfAlbumCategories() {
+        System.out.println("update Cache Of Album Categories");
+        List<AlbumCategory> categories = spotifyClient.getAlbumCategories();
 
-        for (JsonElement artist : artists) {
-            String artistName = artist.getAsJsonObject().get("name").toString();
-            String artistId = artist.getAsJsonObject().get("id").toString();
-            String artistUrlOnSpotify = artist.getAsJsonObject().get("external_urls").getAsJsonObject().get("spotify").getAsString();
-
-            artistList.add(new Artist(artistId, artistName, artistUrlOnSpotify));
+        for (AlbumCategory category : categories) {
+            albumCategoryRepository.add(category);
         }
 
-        return artistList;
+        return categories;
     }
 
-    private void fillFeaturedMusicRepository(String accessToken) throws IOException, InterruptedException {
-        HttpResponse<String> response = getSpotifyInformation(Command.FEATURED, accessToken);
-        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-        JsonArray musics = asJsonObject.get("playlists").getAsJsonObject().get("items").getAsJsonArray();
-
-        saveMusicFromJsonArray(musics, featuredMusicRepository);
-    }
-
-    private void saveMusicFromJsonArray(JsonArray musics, MusicRepository musicRepository) {
-        for (JsonElement musicJsonElement : musics) {
-            JsonObject musicJsonObject = musicJsonElement.getAsJsonObject();
-
-            String id = musicJsonObject.get("id").getAsString();
-            String name = musicJsonObject.get("name").getAsString();
-            String url = musicJsonObject.get("external_urls").getAsJsonObject().get("spotify").getAsString();
-            musicRepository.add(new Music(id, name, url));
+    private void saveMusicToRepository(List<Music> musics, MusicRepository musicRepository) {
+        for (Music music : musics) {
+            musicRepository.add(music);
         }
-    }
-
-    private void fillCategoryMusicRepository(HttpResponse<String> response) {
-        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-        JsonArray musics = asJsonObject.get("playlists").getAsJsonObject().get("items").getAsJsonArray();
-//        System.out.println(response.body());
-
-        saveMusicFromJsonArray(musics, categoryMusicRepository);
-    }
-
-    private void updateApiRoutes(String albumCategoryId) {
-        String url = "https://api.spotify.com/v1/browse/categories/" + albumCategoryId + "/playlists";
-        apiRouter.put(PLAYLISTS, url);
     }
 }

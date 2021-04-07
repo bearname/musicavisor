@@ -8,4 +8,6 @@ public interface MusicRepository {
     void add(Music music);
 
     List<Music> getAll();
+
+    boolean isEmpty();
 }
