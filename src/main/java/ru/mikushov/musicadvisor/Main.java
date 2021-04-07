@@ -5,6 +5,7 @@ import ru.mikushov.musicadvisor.controller.AppController;
 import ru.mikushov.musicadvisor.controller.Command;
 import ru.mikushov.musicadvisor.repository.MemoryAlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
+import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 import ru.mikushov.musicadvisor.service.SpotifyAuthenticationService;
 
 import java.io.IOException;
@@ -19,7 +20,22 @@ public class Main {
         put(Command.PLAYLISTS, "https://api.spotify.com/v1/browse/categories/{category_id}/playlists");
     }};
 
-    private static final AppController appController = new AppController(new MemoryAlbumCategoryRepository(), new MemoryMusicRepository(), new MemoryMusicRepository(), API_ROUTERS, new SpotifyAuthenticationService());
+    private static final AppController appController;
+
+    static {
+        SpotifyAuthenticationService authenticationService = new SpotifyAuthenticationService();
+        MemoryAlbumCategoryRepository albumCategoryRepository = new MemoryAlbumCategoryRepository();
+        MemoryMusicRepository categoryMusicRepository = new MemoryMusicRepository();
+        MemoryMusicRepository featuredMusicRepository = new MemoryMusicRepository();
+        MusicServiceImpl musicService = new MusicServiceImpl(API_ROUTERS, featuredMusicRepository);
+
+        appController = new AppController(albumCategoryRepository,
+                categoryMusicRepository,
+                featuredMusicRepository,
+                API_ROUTERS,
+                authenticationService,
+                musicService);
+    }
 
     public static void main(String[] args) {
         appController.printHelpMessage();
@@ -45,7 +61,7 @@ public class Main {
     private static boolean handleCommand(String command) throws IOException, InterruptedException {
         if (command.equals(Command.NEW)) {
             System.out.println("---NEW RELEASES---");
-            appController.fillAlbumRepository();
+            appController.handleNewCommand();
         } else if (command.equals("auth")) {
             if (appController.isAuthenticated()) {
                 appController.handleAuthCommand();

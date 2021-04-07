@@ -4,14 +4,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.sun.net.httpserver.HttpHandler;
 import ru.mikushov.musicadvisor.model.Album;
 import ru.mikushov.musicadvisor.model.AlbumCategory;
-import ru.mikushov.musicadvisor.model.Artist;
 import ru.mikushov.musicadvisor.model.Music;
 import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
 import ru.mikushov.musicadvisor.service.AuthenticationService;
+import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,18 +23,31 @@ import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
 
 public class AppController extends Controller {
     private final AuthenticationService authenticationService;
+    private final MusicServiceImpl musicService;
     private final AlbumCategoryRepository albumCategoryRepository;
     private final MusicRepository categoryMusicRepository;
     private final MusicRepository featuredMusicRepository;
 
     private final Map<String, String> apiRouter;
 
-    public AppController(AlbumCategoryRepository albumCategoryRepository, MusicRepository categoryMusicRepository, MusicRepository featuredMusicRepository, Map<String, String> apiUrls, AuthenticationService authenticationService) {
+    public AppController(AlbumCategoryRepository albumCategoryRepository, MusicRepository categoryMusicRepository, MusicRepository featuredMusicRepository, Map<String, String> apiUrls, AuthenticationService authenticationService, MusicServiceImpl musicService) {
         this.albumCategoryRepository = albumCategoryRepository;
         this.categoryMusicRepository = categoryMusicRepository;
         this.featuredMusicRepository = featuredMusicRepository;
         this.apiRouter = apiUrls;
         this.authenticationService = authenticationService;
+        this.musicService = musicService;
+    }
+
+    public void handleNewCommand() {
+        List<Album> albumList = this.musicService.getMusicAlbum(authenticationService.getAccessToken());
+        albumList.forEach(System.out::println);
+    }
+
+    public void handleFeaturedCommand() {
+        System.out.println("---FEATURED---");
+        List<Music> allFeaturedMusic = this.musicService.getFeaturedMusic(authenticationService.getAccessToken());
+        allFeaturedMusic.forEach(music -> System.out.println(music.getName() + "\n" + music.getUrl()));
     }
 
     public void handleExitCommand() {
@@ -60,20 +72,7 @@ public class AppController extends Controller {
         albumCategoryRepository.getAll().forEach(category -> System.out.println(category.getName()));
     }
 
-    public void handleFeaturedCommand() throws IOException, InterruptedException {
-        System.out.println("---FEATURED---");
-        fillFeaturedMusicRepository();
-        displayMusicRepository(featuredMusicRepository);
-    }
 
-    public void fillAlbumRepository() throws IOException, InterruptedException {
-        HttpResponse<String> response = getSpotifyInformation(Command.NEW);
-        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-        JsonArray albums = asJsonObject.get("albums").getAsJsonObject().get("items").getAsJsonArray();
-
-        List<Album> albumList = fillAlbumList(albums);
-        albumList.forEach(System.out::println);
-    }
 
     public boolean isAuthenticated() {
         return this.authenticationService.isAuthenticated();
@@ -154,36 +153,5 @@ public class AppController extends Controller {
         HttpResponse<String> response = sendRequest(client, httpRequest);
 
         fillCategoryMusicRepository(response);
-    }
-
-    private List<Album> fillAlbumList(JsonArray albums) {
-        List<Album> albumList = new ArrayList<>();
-        for (JsonElement albumElement : albums) {
-
-            JsonObject albumObject = albumElement.getAsJsonObject();
-
-            String name = albumObject.get("name").getAsString();
-            JsonArray artists = albumObject.get("artists").getAsJsonArray();
-            String albumUrl = albumObject.get("external_urls").getAsJsonObject().get("spotify").getAsString();
-            Album album = new Album(name, fillArtistList(artists), albumUrl);
-            System.out.println(album);
-            albumList.add(album);
-        }
-
-        return albumList;
-    }
-
-    private List<Artist> fillArtistList(JsonArray artists) {
-        List<Artist> artistList = new ArrayList<>();
-
-        for (JsonElement artist : artists) {
-            String artistName = artist.getAsJsonObject().get("name").toString();
-            String artistId = artist.getAsJsonObject().get("id").toString();
-            String artistUrlOnSpotify = artist.getAsJsonObject().get("external_urls").getAsJsonObject().get("spotify").getAsString();
-
-            artistList.add(new Artist(artistId, artistName, artistUrlOnSpotify));
-        }
-
-        return artistList;
     }
 }
