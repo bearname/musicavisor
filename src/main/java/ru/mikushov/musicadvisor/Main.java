@@ -18,8 +18,6 @@ import java.util.InputMismatchException;
 import java.util.Map;
 import java.util.Scanner;
 
-import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
-
 public class Main {
 
     private static final Map<String, String> API_ROUTERS = new HashMap<>() {{

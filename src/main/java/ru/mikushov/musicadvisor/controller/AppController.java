@@ -5,7 +5,6 @@ import ru.mikushov.musicadvisor.model.AlbumCategory;
 import ru.mikushov.musicadvisor.model.Music;
 import ru.mikushov.musicadvisor.service.ExportService;
 import ru.mikushov.musicadvisor.service.MusicService;
-import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 
 import java.util.List;
 
@@ -17,9 +16,7 @@ public class AppController extends Controller {
         this.musicService = musicService;
         this.exportService = exportService;
     }
-//    public AppController(MusicService musicService) {
-//        this.musicService = musicService;
-//    }
+
     public void handleNewCommand() {
         List<Album> albumList = this.musicService.getNewReleasesMusic();
         albumList.forEach(System.out::println);
