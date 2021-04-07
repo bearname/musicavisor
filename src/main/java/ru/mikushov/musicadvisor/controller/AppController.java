@@ -3,17 +3,23 @@ package ru.mikushov.musicadvisor.controller;
 import ru.mikushov.musicadvisor.model.Album;
 import ru.mikushov.musicadvisor.model.AlbumCategory;
 import ru.mikushov.musicadvisor.model.Music;
+import ru.mikushov.musicadvisor.service.ExportService;
+import ru.mikushov.musicadvisor.service.MusicService;
 import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 
 import java.util.List;
 
 public class AppController extends Controller {
-    private final MusicServiceImpl musicService;
+    private final MusicService musicService;
+    private final ExportService exportService;
 
-    public AppController(MusicServiceImpl musicService) {
+    public AppController(MusicService musicService, ExportService exportService) {
         this.musicService = musicService;
+        this.exportService = exportService;
     }
-
+//    public AppController(MusicService musicService) {
+//        this.musicService = musicService;
+//    }
     public void handleNewCommand() {
         List<Album> albumList = this.musicService.getNewReleasesMusic();
         albumList.forEach(System.out::println);
@@ -65,5 +71,14 @@ public class AppController extends Controller {
 
     private void displayMusic(List<Music> musicList) {
         musicList.forEach(music -> System.out.println(music.getName() + "\n" + music.getUrl()));
+    }
+
+    public void handleCacheCommand() {
+        this.musicService.updateCache();
+    }
+
+    public void handleExportCommand() {
+        System.out.println("Ex");
+        this.exportService.export();
     }
 }

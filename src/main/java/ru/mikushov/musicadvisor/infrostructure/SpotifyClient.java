@@ -32,15 +32,25 @@ public class SpotifyClient {
         authenticationService.authenticate();
     }
 
-    public List<Album> getNewReleaseMusic() throws IOException, InterruptedException {
-        JsonArray albums = getJsonElements(Command.NEW, "albums");
+    public List<Album> getNewReleaseMusic() {
+        try {
+            JsonArray albums = getJsonElements(Command.NEW, "albums");
 
-        return fillAlbumList(albums);
+            return fillAlbumList(albums);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
-    public List<Music> getFeaturedPlaylists() throws IOException, InterruptedException {
-        JsonArray playlists = getJsonElements(Command.FEATURED, "playlists");
-        return parseJson(playlists);
+    public List<Music> getFeaturedPlaylists() {
+        try {
+            JsonArray playlists = getJsonElements(Command.FEATURED, "playlists");
+            return parseJson(playlists);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
     public List<AlbumCategory> getAlbumCategories() {
@@ -61,10 +71,15 @@ public class SpotifyClient {
         return result;
     }
 
-    public List<Music> getMusicByCategory(AlbumCategory albumCategory) throws IOException, InterruptedException {
-        updateApiRoutes(albumCategory.getId());
-        JsonArray playlists = getJsonElements(PLAYLISTS, "playlists");
-        return parseJson(playlists);
+    public List<Music> getMusicByCategory(AlbumCategory albumCategory) {
+        try {
+            updateApiRoutes(albumCategory.getId());
+            JsonArray playlists = getJsonElements(PLAYLISTS, "playlists");
+            return parseJson(playlists);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
     private List<Music> parseJson(JsonArray playlists) {
@@ -98,7 +113,7 @@ public class SpotifyClient {
             JsonArray artists = albumObject.get("artists").getAsJsonArray();
             String albumUrl = albumObject.get("external_urls").getAsJsonObject().get("spotify").getAsString();
             Album album = new Album(name, fillArtistList(artists), albumUrl);
-            System.out.println(album);
+//            System.out.println(album);
             albumList.add(album);
         }
 

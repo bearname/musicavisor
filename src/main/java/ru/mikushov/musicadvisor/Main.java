@@ -8,10 +8,15 @@ import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryAlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
+import ru.mikushov.musicadvisor.service.ExportService;
+import ru.mikushov.musicadvisor.service.JsonExportService;
 import ru.mikushov.musicadvisor.service.MusicServiceImpl;
 import ru.mikushov.musicadvisor.service.SpotifyAuthenticationService;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.InputMismatchException;
+import java.util.Map;
+import java.util.Scanner;
 
 import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
 
@@ -36,7 +41,8 @@ public class Main {
 
         MusicServiceImpl musicService = new MusicServiceImpl(featuredMusicRepository, albumCategoryRepository, categoryMusicRepository, spotifyClient);
 
-        appController = new AppController(musicService);
+        ExportService exportService = new JsonExportService(musicService);
+        appController = new AppController(musicService, exportService);
     }
 
     public static void main(String[] args) {
@@ -68,8 +74,12 @@ public class Main {
 //            }
         } else if (command.equals(Command.FEATURED)) {
             appController.handleFeaturedCommand();
+        } else if (command.equals(Command.EXPORT)) {
+            appController.handleExportCommand();
         } else if (command.equals(Command.CATEGORIES)) {
             appController.handleCategoriesCommand();
+        } else if (command.equals(Command.UPDATE_CACHE)) {
+            appController.handleCacheCommand();
         } else if (command.startsWith(Command.PLAYLISTS + " ") && getCategoryName(command).length() > 0) {
             appController.handlePlaylistCommand(getCategoryName(command));
         } else if (command.equals(Command.EXIT)) {

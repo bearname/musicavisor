@@ -7,7 +7,6 @@ import ru.mikushov.musicadvisor.model.Music;
 import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,28 +24,23 @@ public class MusicServiceImpl implements MusicService {
         this.spotifyClient = spotifyClient;
     }
 
-    public List<Album> getNewReleasesMusic( ) {
+    public List<Album> getNewReleasesMusic() {
         try {
             return spotifyClient.getNewReleaseMusic();
         } catch (Exception exception) {
+            exception.printStackTrace();
             return new ArrayList<>();
         }
     }
 
     public List<Music> getFeaturedMusicList() {
-        try {
-            List<Music> featuredPlaylists = featuredMusicRepository.getAll();
+        List<Music> featuredPlaylists = featuredMusicRepository.getAll();
 
-            if (featuredPlaylists.isEmpty()) {
-                featuredPlaylists = updateFeaturedCache();
-            }
-
-            return featuredPlaylists;
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-
-            return new ArrayList<>();
+        if (featuredPlaylists.isEmpty()) {
+            featuredPlaylists = updateFeaturedCache();
         }
+
+        return featuredPlaylists;
     }
 
     public List<AlbumCategory> getAlbumCategoryList() {
@@ -70,27 +64,29 @@ public class MusicServiceImpl implements MusicService {
         final AlbumCategory albumCategory = albumCategoryRepository.findByName(categoryName);
         List<Music> musicList = new ArrayList<>();
         if (albumCategory != null) {
-            try {
-                if (categoryMusicRepository.isEmpty()) {
-                    updateCacheOfCategoryMusicRepository(albumCategory);
-                }
-
-                musicList = categoryMusicRepository.getAll();
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
+            if (categoryMusicRepository.isEmpty()) {
+                updateCacheOfCategoryMusicRepository(albumCategory);
             }
+
+            musicList = categoryMusicRepository.getAll();
         }
 
         return musicList;
     }
 
-    private void updateCacheOfCategoryMusicRepository(AlbumCategory albumCategory) throws IOException, InterruptedException {
+    public void updateCache() {
+        updateFeaturedCache();
+        List<AlbumCategory> albumCategories = updateCacheOfAlbumCategories();
+        albumCategories.forEach(this::updateCacheOfCategoryMusicRepository);
+    }
+
+    private void updateCacheOfCategoryMusicRepository(AlbumCategory albumCategory) {
         System.out.println("update Cache Of Category Music ");
         List<Music> musics = spotifyClient.getMusicByCategory(albumCategory);
         saveMusicToRepository(musics, categoryMusicRepository);
     }
 
-    private List<Music> updateFeaturedCache() throws IOException, InterruptedException {
+    private List<Music> updateFeaturedCache() {
         System.out.println("Update Featured playlist cache");
         List<Music> featuredPlaylists = spotifyClient.getFeaturedPlaylists();
 

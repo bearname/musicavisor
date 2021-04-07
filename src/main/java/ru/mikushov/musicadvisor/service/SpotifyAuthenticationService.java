@@ -15,7 +15,7 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 
 public class SpotifyAuthenticationService  implements AuthenticationService {
-    private String accessToken = "BQA5qVrU48dAjhzYOsiQXRqfDFV5e8RlF1eoOBvUp3-cH5MqUbu5z9zEdBBZhCLX0eLDGEM9oNZg0KQrrCVPwfoRkloOQWZLzgVIxfFtSYBbXcmQWaV0OTTvNSlDlo0KncyhNk5ld_JIQ2nWg3lZ4KWZR6vJADveNSL1ow";
+    private String accessToken = "BQA93xSOBArAckub3qIH671Eqg_Cz1LO1YCAR-UfiJr4d10xzquTvvFHCdrkcmxVAn3sSMBF5JzEuX8LWu9wue36rXChLElsTTeMCR5Ip5-p-E-oVVUZ-Q2hNL4sb04MCEc6Bm1HUkFLUk7BxZnEpk5CG6CXhExq1Chi2Q";
 
     @Override
     public void authenticate() {
