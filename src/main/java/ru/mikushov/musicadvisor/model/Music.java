@@ -23,4 +23,13 @@ public class Music {
     public String getUrl() {
         return url;
     }
+
+    @Override
+    public String toString() {
+        return "Music{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", url='" + url + '\'' +
+                '}';
+    }
 }

@@ -33,6 +33,11 @@ public class MusicServiceImpl implements MusicService {
         }
     }
 
+    @Override
+    public void addFeaturedMusic(List<Music> musicList) {
+        musicList.forEach(featuredMusicRepository::add);
+    }
+
     public List<Music> getFeaturedMusicList() {
         List<Music> featuredPlaylists = featuredMusicRepository.getAll();
 

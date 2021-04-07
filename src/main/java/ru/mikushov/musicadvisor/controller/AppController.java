@@ -81,4 +81,9 @@ public class AppController extends Controller {
         System.out.println("Ex");
         this.exportService.export();
     }
+
+    public void handleLoadCommand(String fileName) {
+        System.out.println("Load");
+        this.exportService.load(fileName);
+    }
 }

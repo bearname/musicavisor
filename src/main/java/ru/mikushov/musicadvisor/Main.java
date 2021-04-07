@@ -76,6 +76,8 @@ public class Main {
             appController.handleFeaturedCommand();
         } else if (command.equals(Command.EXPORT)) {
             appController.handleExportCommand();
+        } else if (command.startsWith(Command.LOAD + " ") && getFileName(command).length() > 0) {
+            appController.handleLoadCommand(getFileName(command));
         } else if (command.equals(Command.CATEGORIES)) {
             appController.handleCategoriesCommand();
         } else if (command.equals(Command.UPDATE_CACHE)) {
@@ -91,7 +93,15 @@ public class Main {
         return false;
     }
 
+
+    private static String getFileName(String command) {
+        return getSecondaryParameter(command, Command.LOAD);
+    }
     private static String getCategoryName(String command) {
-        return command.substring((PLAYLISTS + " ").length());
+        return getSecondaryParameter(command, Command.PLAYLISTS);
+    }
+
+    private static String getSecondaryParameter(String command, String playlists) {
+        return command.substring((playlists + " ").length());
     }
 }

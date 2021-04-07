@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface MusicService {
     List<Album> getNewReleasesMusic();
+    void addFeaturedMusic(List<Music> musicList);
 
     List<Music> getFeaturedMusicList();
 
