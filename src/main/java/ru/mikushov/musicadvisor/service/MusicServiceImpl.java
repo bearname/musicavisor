@@ -6,8 +6,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import ru.mikushov.musicadvisor.controller.Command;
 import ru.mikushov.musicadvisor.model.Album;
+import ru.mikushov.musicadvisor.model.AlbumCategory;
 import ru.mikushov.musicadvisor.model.Artist;
 import ru.mikushov.musicadvisor.model.Music;
+import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
+import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
 
 import java.io.IOException;
@@ -19,19 +22,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
+
 public class MusicServiceImpl implements MusicService {
 
     private final Map<String, String> apiRouter;
     private final MusicRepository featuredMusicRepository;
+    private final AlbumCategoryRepository albumCategoryRepository;
+    private final MemoryMusicRepository categoryMusicRepository;
 
-    public MusicServiceImpl(Map<String, String> apiRouter, MusicRepository featuredMusicRepository) {
+    public MusicServiceImpl(Map<String, String> apiRouter, MusicRepository featuredMusicRepository, AlbumCategoryRepository albumCategoryRepository, MemoryMusicRepository categoryMusicRepository) {
         this.apiRouter = apiRouter;
         this.featuredMusicRepository = featuredMusicRepository;
+        this.albumCategoryRepository = albumCategoryRepository;
+        this.categoryMusicRepository = categoryMusicRepository;
     }
 
-    public List<Album> getMusicAlbum(String accessToken)  {
+    public List<Album> getMusicAlbum(String accessToken) {
         try {
-            HttpResponse<String> response = getSpotifyInformation(Command.NEW, accessToken );
+            HttpResponse<String> response = getSpotifyInformation(Command.NEW, accessToken);
             JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
             JsonArray albums = asJsonObject.get("albums").getAsJsonObject().get("items").getAsJsonArray();
 
@@ -41,6 +50,59 @@ public class MusicServiceImpl implements MusicService {
         }
     }
 
+    public List<Music> getFeaturedMusicList(String accessToken) {
+        try {
+            fillFeaturedMusicRepository(accessToken);
+            return featuredMusicRepository.getAll();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+
+            return new ArrayList<>();
+        }
+    }
+
+    public List<AlbumCategory> getAlbumCategoryList(String accessToken) {
+        HttpResponse<String> response;
+        try {
+            response = getSpotifyInformation(Command.CATEGORIES, accessToken);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+
+        System.out.println(response.body());
+        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+        JsonArray categories = asJsonObject.get("categories").getAsJsonObject().get("items").getAsJsonArray();
+
+        for (JsonElement category : categories) {
+
+            JsonObject album = category.getAsJsonObject();
+
+            String id = album.get("id").getAsString();
+            String name = album.get("name").getAsString();
+            albumCategoryRepository.add(new AlbumCategory(id, name));
+        }
+
+        return albumCategoryRepository.getAll();
+    }
+
+    public List<Music> getMusicByCategoryName(String categoryName, String accessToken) {
+        final var albumCategory = albumCategoryRepository.findByName(categoryName);
+        List<Music> musicList = new ArrayList<>();
+        if (albumCategory != null) {
+            try {
+                updateApiRoutes(albumCategory.getId());
+                HttpResponse<String> response = getSpotifyInformation(PLAYLISTS, accessToken);
+                fillCategoryMusicRepository(response);
+                musicList = categoryMusicRepository.getAll();
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return musicList;
+    }
+
     private HttpResponse<String> getSpotifyInformation(String command, String accessToken) throws IOException, InterruptedException {
         HttpClient client = HttpClient.newBuilder().build();
         HttpRequest httpRequest = HttpRequest.newBuilder()
@@ -48,8 +110,8 @@ public class MusicServiceImpl implements MusicService {
                 .uri(URI.create(apiRouter.get(command)))
                 .GET()
                 .build();
+
         return client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-//        return sendRequest(client, httpRequest);
     }
 
     private List<Album> fillAlbumList(JsonArray albums) {
@@ -83,33 +145,35 @@ public class MusicServiceImpl implements MusicService {
         return artistList;
     }
 
-    public List<Music> getFeaturedMusic(String accessToken) {
-        try {
-            fillFeaturedMusicRepository(accessToken);
-            return featuredMusicRepository.getAll();
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-
-            return new ArrayList<>();
-        }
-    }
-
     private void fillFeaturedMusicRepository(String accessToken) throws IOException, InterruptedException {
         HttpResponse<String> response = getSpotifyInformation(Command.FEATURED, accessToken);
         JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
         JsonArray musics = asJsonObject.get("playlists").getAsJsonObject().get("items").getAsJsonArray();
 
-        parseJson(musics, featuredMusicRepository);
+        saveMusicFromJsonArray(musics, featuredMusicRepository);
     }
 
-    protected void parseJson(JsonArray musics, MusicRepository categoryMusicRepository) {
+    private void saveMusicFromJsonArray(JsonArray musics, MusicRepository musicRepository) {
         for (JsonElement musicJsonElement : musics) {
             JsonObject musicJsonObject = musicJsonElement.getAsJsonObject();
 
             String id = musicJsonObject.get("id").getAsString();
             String name = musicJsonObject.get("name").getAsString();
             String url = musicJsonObject.get("external_urls").getAsJsonObject().get("spotify").getAsString();
-            categoryMusicRepository.add(new Music(id, name, url));
+            musicRepository.add(new Music(id, name, url));
         }
+    }
+
+    private void fillCategoryMusicRepository(HttpResponse<String> response) {
+        JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+        JsonArray musics = asJsonObject.get("playlists").getAsJsonObject().get("items").getAsJsonArray();
+//        System.out.println(response.body());
+
+        saveMusicFromJsonArray(musics, categoryMusicRepository);
+    }
+
+    private void updateApiRoutes(String albumCategoryId) {
+        String url = "https://api.spotify.com/v1/browse/categories/" + albumCategoryId + "/playlists";
+        apiRouter.put(PLAYLISTS, url);
     }
 }

@@ -5,7 +5,7 @@ import ru.mikushov.musicadvisor.model.Music;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MemoryMusicRepository implements MusicRepository{
+public class MemoryMusicRepository implements MusicRepository {
     private final List<Music> musicList = new ArrayList<>();
 
     public void add(Music music) {

@@ -11,6 +11,8 @@ import ru.mikushov.musicadvisor.service.SpotifyAuthenticationService;
 import java.io.IOException;
 import java.util.*;
 
+import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
+
 public class Main {
 
     private static final Map<String, String> API_ROUTERS = new HashMap<>() {{
@@ -27,12 +29,10 @@ public class Main {
         MemoryAlbumCategoryRepository albumCategoryRepository = new MemoryAlbumCategoryRepository();
         MemoryMusicRepository categoryMusicRepository = new MemoryMusicRepository();
         MemoryMusicRepository featuredMusicRepository = new MemoryMusicRepository();
-        MusicServiceImpl musicService = new MusicServiceImpl(API_ROUTERS, featuredMusicRepository);
+        MusicServiceImpl musicService = new MusicServiceImpl(API_ROUTERS, featuredMusicRepository, albumCategoryRepository, categoryMusicRepository);
 
-        appController = new AppController(albumCategoryRepository,
+        appController = new AppController(
                 categoryMusicRepository,
-                featuredMusicRepository,
-                API_ROUTERS,
                 authenticationService,
                 musicService);
     }
@@ -51,14 +51,12 @@ public class Main {
                 System.out.println(command);
             } catch (InputMismatchException exception) {
                 appController.invalidCommand(command);
-            } catch (InterruptedException | IOException e) {
-                e.printStackTrace();
             }
             System.out.print("> ");
         }
     }
 
-    private static boolean handleCommand(String command) throws IOException, InterruptedException {
+    private static boolean handleCommand(String command) {
         if (command.equals(Command.NEW)) {
             System.out.println("---NEW RELEASES---");
             appController.handleNewCommand();
@@ -72,8 +70,8 @@ public class Main {
             appController.handleFeaturedCommand();
         } else if (command.equals(Command.CATEGORIES)) {
             appController.handleCategoriesCommand();
-        } else if (command.startsWith(Command.PLAYLISTS + " ") && command.substring((Command.PLAYLISTS + " ").length()).length() > 0) {
-            appController.handlePlaylistCommand(command);
+        } else if (command.startsWith(Command.PLAYLISTS + " ") && getCategoryName(command).length() > 0) {
+            appController.handlePlaylistCommand(getCategoryName(command));
         } else if (command.equals(Command.EXIT)) {
             appController.handleExitCommand();
             return true;
@@ -81,5 +79,9 @@ public class Main {
             appController.invalidCommand(command);
         }
         return false;
+    }
+
+    private static String getCategoryName(String command) {
+        return command.substring((PLAYLISTS + " ").length());
     }
 }
