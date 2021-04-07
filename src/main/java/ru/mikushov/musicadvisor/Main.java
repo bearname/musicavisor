@@ -4,6 +4,7 @@ package ru.mikushov.musicadvisor;
 import ru.mikushov.musicadvisor.controller.AppController;
 import ru.mikushov.musicadvisor.controller.Command;
 import ru.mikushov.musicadvisor.infrostructure.SpotifyClient;
+import ru.mikushov.musicadvisor.model.SearchType;
 import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryAlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MemoryMusicRepository;
@@ -25,6 +26,7 @@ public class Main {
         put(Command.FEATURED, "https://api.spotify.com/v1/browse/featured-playlists");
         put(Command.CATEGORIES, "https://api.spotify.com/v1/browse/categories");
         put(Command.PLAYLISTS, "https://api.spotify.com/v1/browse/categories/{category_id}/playlists");
+        put(Command.SEARCH, "https://api.spotify.com/v1/search?q=");
     }};
 
     private static final AppController appController;
@@ -44,6 +46,10 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        //TODO add pagination
+        //TODO search command
+        //TODO get recommendation
+        //TODO refresh toke store token and check expiration and auto update them
         appController.printHelpMessage();
         String command = "";
         Scanner scanner = new Scanner(System.in);
@@ -72,6 +78,19 @@ public class Main {
 //            }
         } else if (command.equals(Command.FEATURED)) {
             appController.handleFeaturedCommand();
+        } else if (command.startsWith(Command.SEARCH + " ")) {
+            String searchQuery = command.substring((Command.SEARCH + " ").length());
+            int i = searchQuery.indexOf(" ");
+            String type = searchQuery.substring(0, i);
+            String search = searchQuery.substring(i + 1);
+
+            System.out.println(type + "' " + search);
+            if (!SearchType.contains(type)) {
+                System.out.println("Unknown search type '" + type + "'. Search type = album , artist, playlist, track ");
+            } else {
+                SearchType searchType = SearchType.valueOf(type);
+                appController.handleSearchCommand(searchType, search);
+            }
         } else if (command.equals(Command.EXPORT)) {
             appController.handleExportCommand();
         } else if (command.startsWith(Command.LOAD + " ") && getFileName(command).length() > 0) {
@@ -91,10 +110,10 @@ public class Main {
         return false;
     }
 
-
     private static String getFileName(String command) {
         return getSecondaryParameter(command, Command.LOAD);
     }
+
     private static String getCategoryName(String command) {
         return getSecondaryParameter(command, Command.PLAYLISTS);
     }

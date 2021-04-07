@@ -4,6 +4,7 @@ import ru.mikushov.musicadvisor.infrostructure.SpotifyClient;
 import ru.mikushov.musicadvisor.model.Album;
 import ru.mikushov.musicadvisor.model.AlbumCategory;
 import ru.mikushov.musicadvisor.model.Music;
+import ru.mikushov.musicadvisor.model.SearchType;
 import ru.mikushov.musicadvisor.repository.AlbumCategoryRepository;
 import ru.mikushov.musicadvisor.repository.MusicRepository;
 
@@ -24,6 +25,7 @@ public class MusicServiceImpl implements MusicService {
         this.spotifyClient = spotifyClient;
     }
 
+    @Override
     public List<Album> getNewReleasesMusic() {
         try {
             return spotifyClient.getNewReleaseMusic();
@@ -48,6 +50,7 @@ public class MusicServiceImpl implements MusicService {
         return featuredPlaylists;
     }
 
+    @Override
     public List<AlbumCategory> getAlbumCategoryList() {
         try {
             List<AlbumCategory> all = albumCategoryRepository.getAll();
@@ -61,6 +64,7 @@ public class MusicServiceImpl implements MusicService {
         }
     }
 
+    @Override
     public List<Music> getMusicByCategoryName(String categoryName) {
         if (albumCategoryRepository.isEmpty()) {
             updateCacheOfAlbumCategories();
@@ -79,10 +83,17 @@ public class MusicServiceImpl implements MusicService {
         return musicList;
     }
 
+    @Override
     public void updateCache() {
         updateFeaturedCache();
         List<AlbumCategory> albumCategories = updateCacheOfAlbumCategories();
         albumCategories.forEach(this::updateCacheOfCategoryMusicRepository);
+    }
+
+    @Override
+    public void search(SearchType type, String searchQuery) {
+        List<?> list = spotifyClient.search(type, searchQuery);
+
     }
 
     private void updateCacheOfCategoryMusicRepository(AlbumCategory albumCategory) {

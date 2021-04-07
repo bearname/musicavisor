@@ -15,7 +15,9 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 
 public class SpotifyAuthenticationService  implements AuthenticationService {
-    private String accessToken = "BQA93xSOBArAckub3qIH671Eqg_Cz1LO1YCAR-UfiJr4d10xzquTvvFHCdrkcmxVAn3sSMBF5JzEuX8LWu9wue36rXChLElsTTeMCR5Ip5-p-E-oVVUZ-Q2hNL4sb04MCEc6Bm1HUkFLUk7BxZnEpk5CG6CXhExq1Chi2Q";
+    private String accessToken = "BQAlSyiynj3DVHDkAnz4O4I58Ir2o9seVFTosHBje92rCfBGAt56YUfMK-HdxYdWeXTbI7qHMWB8dK7UJyER4zGHNF8h8XtRzYWCBGavxwsrrcIbNi1xi6pFm18xoeeNv0Rv2yor4XEwUML3M8oKVfs_QN4y0GyX-lM47w";
+    private String refreshToken = "";
+    private String expires_in;
 
     @Override
     public void authenticate() {
@@ -62,7 +64,10 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
                 exchange.getResponseBody().write(responseText.getBytes());
                 exchange.getResponseBody().close();
 
-                accessToken = getAccessToken(client, query);
+                JsonObject jsonObject = getJsonObject(client, query);
+                accessToken = getValue(jsonObject, "access_token");
+                expires_in = getValue(jsonObject, "expires_in");
+                refreshToken = getValue(jsonObject, "refresh_token");
 
                 System.out.println("---SUCCESS---");
             } catch (InterruptedException e) {
@@ -71,7 +76,11 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
         };
     }
 
-    private String getAccessToken(HttpClient client, String query) throws IOException, InterruptedException {
+    private String getValue(JsonObject jsonObject, String type) {
+        return jsonObject.get(type).getAsString();
+    }
+
+    private JsonObject getJsonObject(HttpClient client, String query) throws IOException, InterruptedException {
         final String base64 = Base64.getEncoder().withoutPadding().encodeToString((Config.CLIENT_ID + ":" + Config.CLIENT_SECRET).getBytes());
         final String code = query.substring(5);
         HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.ofString("grant_type=authorization_code&code=" + code + "&redirect_uri=" + Config.REDIRECT_URI);
@@ -88,8 +97,7 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
 
         String body = response.body();
         System.out.println(body);
-        JsonObject jo = JsonParser.parseString(body).getAsJsonObject();
-        return jo.get("access_token").getAsString();
+        return JsonParser.parseString(body).getAsJsonObject();
     }
 
     private void getSpotifyCode(HttpClient client) throws IOException, InterruptedException {

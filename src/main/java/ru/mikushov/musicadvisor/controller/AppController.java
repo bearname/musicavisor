@@ -3,6 +3,7 @@ package ru.mikushov.musicadvisor.controller;
 import ru.mikushov.musicadvisor.model.Album;
 import ru.mikushov.musicadvisor.model.AlbumCategory;
 import ru.mikushov.musicadvisor.model.Music;
+import ru.mikushov.musicadvisor.model.SearchType;
 import ru.mikushov.musicadvisor.service.ExportService;
 import ru.mikushov.musicadvisor.service.MusicService;
 
@@ -82,5 +83,9 @@ public class AppController extends Controller {
     public void handleLoadCommand(String fileName) {
         System.out.println("Load");
         this.exportService.load(fileName);
+    }
+
+    public void handleSearchCommand(SearchType type, String searchQuery) {
+        this.musicService.search(type, searchQuery);
     }
 }

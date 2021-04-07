@@ -5,10 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import ru.mikushov.musicadvisor.controller.Command;
-import ru.mikushov.musicadvisor.model.Album;
-import ru.mikushov.musicadvisor.model.AlbumCategory;
-import ru.mikushov.musicadvisor.model.Artist;
-import ru.mikushov.musicadvisor.model.Music;
+import ru.mikushov.musicadvisor.model.*;
 import ru.mikushov.musicadvisor.service.AuthenticationService;
 
 import java.io.IOException;
@@ -21,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static ru.mikushov.musicadvisor.controller.Command.PLAYLISTS;
+import static ru.mikushov.musicadvisor.controller.Command.SEARCH;
 
 public class SpotifyClient {
     private final Map<String, String> apiRouter;
@@ -96,11 +94,12 @@ public class SpotifyClient {
         return result;
     }
 
-    private JsonArray getJsonElements(String categories, String categories2) throws IOException, InterruptedException {
-        HttpResponse<String> response = request(categories, authenticationService.getAccessToken());
+    private JsonArray getJsonElements(String command, String itemType) throws IOException, InterruptedException {
+        HttpResponse<String> response = request(command, authenticationService.getAccessToken());
+//        System.out.println(response.body());
         JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
 
-        return asJsonObject.get(categories2).getAsJsonObject().get("items").getAsJsonArray();
+        return asJsonObject.get(itemType).getAsJsonObject().get("items").getAsJsonArray();
     }
 
     private List<Album> fillAlbumList(JsonArray albums) {
@@ -148,5 +147,21 @@ public class SpotifyClient {
     private void updateApiRoutes(String albumCategoryId) {
         String url = "https://api.spotify.com/v1/browse/categories/" + albumCategoryId + "/playlists";
         apiRouter.put(PLAYLISTS, url);
+    }
+
+    public List<?> search(SearchType type, String searchQuery) {
+
+        apiRouter.put(SEARCH, apiRouter.get(SEARCH) + "" + searchQuery + "&type=" + type);
+
+        try {
+            JsonArray jsonElements = getJsonElements(SEARCH, type.getValue() + 's');
+            jsonElements.forEach(item -> {
+                System.out.println(item);
+            });
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return new ArrayList<>();
     }
 }

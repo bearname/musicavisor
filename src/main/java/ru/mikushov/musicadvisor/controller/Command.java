@@ -9,4 +9,5 @@ public class Command {
     public static final String EXPORT = "export";
     public static final String LOAD = "load";
     public static final String EXIT = "exit";
+    public static final String SEARCH = "search";
 }
