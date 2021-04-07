@@ -3,9 +3,9 @@ package ru.mikushov.musicadvisor.model;
 import java.util.List;
 
 public class Album {
-    private String name;
-    private List<Artist> artistList;
-    private String url;
+    private final String name;
+    private final List<Artist> artistList;
+    private final String url;
 
     public Album(String name, List<Artist> artists, String url) {
         this.name = name;

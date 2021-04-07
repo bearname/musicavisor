@@ -2,49 +2,16 @@ package ru.mikushov.musicadvisor.repository;
 
 import ru.mikushov.musicadvisor.model.AlbumCategory;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class AlbumCategoryRepository {
-    private List<AlbumCategory> albumCategoryList = new ArrayList<>();
+public interface AlbumCategoryRepository {
 
-    public List<AlbumCategory> getAll() {
-        return albumCategoryList;
-    }
+    List<AlbumCategory> getAll();
+    void add(AlbumCategory category) ;
 
-    public void add(AlbumCategory category) {
-        if (!albumCategoryList.contains(category)) {
-            albumCategoryList.add(category);
-        }
-    }
+    boolean hasCategory(String id);
 
-    public boolean hasCategory(String id) {
-        for (AlbumCategory albumCategory : albumCategoryList) {
-            if (albumCategory.getId().equals(id)) {
-                return true;
-            }
-        }
+    AlbumCategory findById(String id) ;
 
-        return false;
-    }
-
-    public AlbumCategory findById(String id) {
-        for (AlbumCategory albumCategory : albumCategoryList) {
-            if (albumCategory.getId().equals(id)) {
-                return albumCategory;
-            }
-        }
-
-        return null;
-    }
-
-    public AlbumCategory findByName(String name) {
-        for (AlbumCategory albumCategory : albumCategoryList) {
-            if (albumCategory.getName().equals(name)) {
-                return albumCategory;
-            }
-        }
-
-        return null;
-    }
+    AlbumCategory findByName(String name) ;
 }

@@ -1,9 +1,9 @@
 package ru.mikushov.musicadvisor.model;
 
 public class Artist {
-    private String id;
-    private String name;
-    private String url;
+    private final String id;
+    private final String name;
+    private final String url;
 
     public Artist(String id, String name, String url) {
         this.id = id;

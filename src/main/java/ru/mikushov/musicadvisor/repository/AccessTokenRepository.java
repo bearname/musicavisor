@@ -6,11 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AccessTokenRepository {
-    private List<AccessToken> accessTokenList = new ArrayList<>();
+    private final List<AccessToken> accessTokenList = new ArrayList<>();
 
     public void addAccessToken(AccessToken token) {
         accessTokenList.add(token);
     }
-
-
 }
