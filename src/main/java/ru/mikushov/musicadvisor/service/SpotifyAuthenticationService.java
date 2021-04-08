@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SpotifyAuthenticationService implements AuthenticationService {
-    private String accessToken = "BQDLcWwibR-jatI0vQXQKslUi6QznwgXbJf0n2uegqsJDjQQenBHpzK1RbqVxlBI8D6_xolCR531rgVW3qDsQlRmhLjMFSXD8-JC40jn1jvnEYwZUTtgL8L8n_qArOGc6MqhtCOKhP1pLg9tWVwtKp4eDoq34_Pj1vPH6w";
+    private String accessToken = "";
     private String refreshToken = "";
     private long expiresIn = 3600;
 
