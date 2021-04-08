@@ -9,47 +9,95 @@ import ru.mikushov.musicadvisor.controller.Config;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+import java.util.Date;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-public class SpotifyAuthenticationService  implements AuthenticationService {
-    private String accessToken = "BQAlSyiynj3DVHDkAnz4O4I58Ir2o9seVFTosHBje92rCfBGAt56YUfMK-HdxYdWeXTbI7qHMWB8dK7UJyER4zGHNF8h8XtRzYWCBGavxwsrrcIbNi1xi6pFm18xoeeNv0Rv2yor4XEwUML3M8oKVfs_QN4y0GyX-lM47w";
+public class SpotifyAuthenticationService implements AuthenticationService {
+    private String accessToken = "BQDLcWwibR-jatI0vQXQKslUi6QznwgXbJf0n2uegqsJDjQQenBHpzK1RbqVxlBI8D6_xolCR531rgVW3qDsQlRmhLjMFSXD8-JC40jn1jvnEYwZUTtgL8L8n_qArOGc6MqhtCOKhP1pLg9tWVwtKp4eDoq34_Pj1vPH6w";
     private String refreshToken = "";
-    private String expires_in;
+    private long expiresIn = 3600;
 
     @Override
     public void authenticate() {
-        if (accessToken.isEmpty()) {
-            HttpServer server = null;
-            try {
-                HttpClient client = HttpClient.newBuilder().build();
-                server = HttpServer.create();
-                server.bind(new InetSocketAddress(8080), 0);
-                HttpHandler httpHandler = getAuthHandler(client);
+        if (!isAuthenticated()) {
+            initAccessToken();
+        }
+    }
 
-                server.createContext("/", httpHandler);
-                server.start();
+    private void initAccessToken() {
+        HttpServer server = null;
+        try {
+            HttpClient client = HttpClient.newBuilder().build();
+            HttpHandler httpHandler = getAuthHandler(client);
 
-                getSpotifyCode(client);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                if (server != null) {
-                    server.stop(1);
-                }
+            server = HttpServer.create();
+            server.bind(new InetSocketAddress(8080), 0);
+
+            server.createContext("/", httpHandler);
+            server.start();
+
+            getSpotifyCode(client);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            if (server != null) {
+                server.stop(1);
             }
         }
     }
 
     @Override
     public boolean isAuthenticated() {
-        return !accessToken.isEmpty();
+        return !accessTokenExpired() && !accessToken.isEmpty();
     }
 
     @Override
     public String getAccessToken() {
+
+        if (accessTokenExpired()) {
+            refreshToken();
+        } else {
+            System.out.println("token valid");
+        }
+
         return accessToken;
+    }
+
+    private void refreshToken() {
+        try {
+            System.out.println("refresh token");
+            HttpClient client = HttpClient.newHttpClient();
+            String parameters = parsePostBodyParameter(Map.of("grant_type", "refresh_token", "refresh_token", refreshToken));
+            setNewCredential(getJsonObject(client, parameters));
+        } catch (Exception exc) {
+            exc.printStackTrace();
+        }
+    }
+
+    private String parsePostBodyParameter(Map<String, String> bodyParameter) {
+        return bodyParameter
+                .entrySet()
+                .stream()
+                .map(entry -> String.join("=",
+                        URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8),
+                        URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+                ).collect(Collectors.joining("&"));
+    }
+
+    private boolean accessTokenExpired() {
+        long current = System.currentTimeMillis();
+        System.out.println(current + " token expire at: " + expiresIn);
+        System.out.println(formatDate(current) + " token expire at: " + formatDate(expiresIn));
+
+        return expiresIn < current;
     }
 
     private HttpHandler getAuthHandler(HttpClient client) {
@@ -64,9 +112,9 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
                 exchange.getResponseBody().write(responseText.getBytes());
                 exchange.getResponseBody().close();
 
-                JsonObject jsonObject = getJsonObject(client, query);
-                accessToken = getValue(jsonObject, "access_token");
-                expires_in = getValue(jsonObject, "expires_in");
+                final String code = query.substring(5);
+                JsonObject jsonObject = getJsonObject(client, "grant_type=authorization_code&code=" + code + "&redirect_uri=" + Config.REDIRECT_URI);
+                setNewCredential(jsonObject);
                 refreshToken = getValue(jsonObject, "refresh_token");
 
                 System.out.println("---SUCCESS---");
@@ -76,14 +124,26 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
         };
     }
 
+    private void setNewCredential(JsonObject jsonObject) {
+        accessToken = getValue(jsonObject, "access_token");
+        expiresIn = System.currentTimeMillis() + (Long.parseLong(getValue(jsonObject, "expires_in"))) * 1000;
+        String dateFormatted = formatDate(expiresIn);
+        System.out.println("token expire at: " + dateFormatted);
+    }
+
+    private String formatDate(long date1) {
+        Date date = new Date(date1);
+        DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        return formatter.format(date);
+    }
+
     private String getValue(JsonObject jsonObject, String type) {
         return jsonObject.get(type).getAsString();
     }
 
-    private JsonObject getJsonObject(HttpClient client, String query) throws IOException, InterruptedException {
-        final String base64 = Base64.getEncoder().withoutPadding().encodeToString((Config.CLIENT_ID + ":" + Config.CLIENT_SECRET).getBytes());
-        final String code = query.substring(5);
-        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.ofString("grant_type=authorization_code&code=" + code + "&redirect_uri=" + Config.REDIRECT_URI);
+    private JsonObject getJsonObject(HttpClient client, String bodyParameter) throws IOException, InterruptedException {
+        final String base64 = encodeBase64(Config.CLIENT_ID + ":" + Config.CLIENT_SECRET);
+        HttpRequest.BodyPublisher bodyPublisher = HttpRequest.BodyPublishers.ofString(bodyParameter);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .header("Content-Type", "application/x-www-form-urlencoded")
@@ -92,12 +152,16 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
                 .POST(bodyPublisher)
                 .build();
 
-        final HttpResponse<String> response =  client.send(request, HttpResponse.BodyHandlers.ofString());
+        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("response:");
 
         String body = response.body();
         System.out.println(body);
         return JsonParser.parseString(body).getAsJsonObject();
+    }
+
+    private String encodeBase64(String string) {
+        return Base64.getEncoder().withoutPadding().encodeToString(string.getBytes());
     }
 
     private void getSpotifyCode(HttpClient client) throws IOException, InterruptedException {
@@ -109,7 +173,7 @@ public class SpotifyAuthenticationService  implements AuthenticationService {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("use this link to request the access code:\n" + requestUri + "\nwaiting for code...");
-
-        System.out.println(response.body());
+//        System.out.println(response.body());
     }
+
 }

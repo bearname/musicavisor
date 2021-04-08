@@ -54,6 +54,8 @@ public class Main {
         String command = "";
         Scanner scanner = new Scanner(System.in);
         System.out.print("> ");
+        SearchType album = SearchType.valueOf("ALBUM");
+        System.out.println(album.getValue());
         while (scanner.hasNext()) {
             try {
                 command = scanner.nextLine();
@@ -84,12 +86,13 @@ public class Main {
             String type = searchQuery.substring(0, i);
             String search = searchQuery.substring(i + 1);
 
-            System.out.println(type + "' " + search);
-            if (!SearchType.contains(type)) {
-                System.out.println("Unknown search type '" + type + "'. Search type = album , artist, playlist, track ");
-            } else {
-                SearchType searchType = SearchType.valueOf(type);
+            System.out.println(type.toUpperCase() + "' " + search);
+
+            try {
+                SearchType searchType = SearchType.valueOf(type.toUpperCase());
                 appController.handleSearchCommand(searchType, search);
+            } catch (IllegalArgumentException exception) {
+                System.out.println("Unknown search type '" + type + "'. Search type = album , artist, playlist, track ");
             }
         } else if (command.equals(Command.EXPORT)) {
             appController.handleExportCommand();

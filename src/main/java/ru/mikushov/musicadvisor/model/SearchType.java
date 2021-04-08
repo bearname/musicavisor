@@ -16,20 +16,11 @@ public enum SearchType {
         return value;
     }
 
-    public static boolean contains(String type) {
-
-        for (SearchType searchType : SearchType.values()) {
-            System.out.println(searchType.name().toLowerCase() + "'" + type + "'");
-            System.out.println(searchType.name() == type);
-            if (searchType.name() == type.toUpperCase()) {
+    public static boolean contains(String s)
+    {
+        for(SearchType choice:values())
+            if (choice.name().equals(s))
                 return true;
-            }
-
-//            if (searchType.getValue().equals(type)) {
-//                return true;
-//            }
-        }
-
         return false;
     }
 }

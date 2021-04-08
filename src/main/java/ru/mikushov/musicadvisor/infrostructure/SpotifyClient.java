@@ -96,9 +96,10 @@ public class SpotifyClient {
 
     private JsonArray getJsonElements(String command, String itemType) throws IOException, InterruptedException {
         HttpResponse<String> response = request(command, authenticationService.getAccessToken());
-//        System.out.println(response.body());
+        System.out.println(response.body());
         JsonObject asJsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
 
+        System.out.println("itemType: " + itemType);
         return asJsonObject.get(itemType).getAsJsonObject().get("items").getAsJsonArray();
     }
 
@@ -151,13 +152,15 @@ public class SpotifyClient {
 
     public List<?> search(SearchType type, String searchQuery) {
 
-        apiRouter.put(SEARCH, apiRouter.get(SEARCH) + "" + searchQuery + "&type=" + type);
+        apiRouter.put(SEARCH, apiRouter.get(SEARCH) + "" + searchQuery + "&type=" + type.getValue());
 
         try {
-            JsonArray jsonElements = getJsonElements(SEARCH, type.getValue() + 's');
-            jsonElements.forEach(item -> {
-                System.out.println(item);
-            });
+            String value = type.getValue();
+            System.out.println("value: " + value);
+            String s = apiRouter.get(SEARCH);
+            System.out.println(s);
+            JsonArray jsonElements = getJsonElements(SEARCH, value + 's');
+            jsonElements.forEach(System.out::println);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
